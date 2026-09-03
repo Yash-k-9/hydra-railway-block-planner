@@ -1,0 +1,4 @@
+corridor_id,name,origin,destination,length_km,segments,topology_anchors,reference_stations
+HYD-C01,Secunderabad-Bolarum,Secunderabad Junction,Bolarum,27.077,19,5,5
+HYD-C02,Secunderabad-Lingampalli,Secunderabad Junction,Chandanagar,21.496,38,5,7
+HYD-C03,Secunderabad-Ghatkesar,Secunderabad Junction,Ghatkesar,20.275,18,3,4

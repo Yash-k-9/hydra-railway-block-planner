@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  --color-rail-navy: #0F172A;
+  --color-rail-dark: #1E293B;
+  --color-rail-panel: #334155;
+  --color-rail-blue: #3B82F6;
+  --color-rail-accent: #38BDF8;
+  --color-rail-critical: #EF4444;
+  --color-rail-high: #F97316;
+  --color-rail-medium: #EAB308;
+  --color-rail-low: #22C55E;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}

@@ -1,0 +1,298 @@
+{
+  "dataset": "HYDRA Hyderabad preliminary planning corridors",
+  "version": "0.1",
+  "source_network": "OSM-derived planning-track graph",
+  "corridors": [
+    {
+      "corridor_id": "HYD-C01",
+      "hydra_name": "Secunderabad-Bolarum",
+      "origin": "Secunderabad Junction",
+      "destination": "Bolarum",
+      "reference_stations": [
+        "Secunderabad Junction",
+        "Alwal",
+        "Bolarum",
+        "Gowdavalli",
+        "Gundla Pochampally"
+      ],
+      "reference_station_status": [
+        {
+          "station": "Secunderabad Junction",
+          "graph_node": "GN-0095",
+          "is_path_anchor": true
+        },
+        {
+          "station": "Alwal",
+          "graph_node": "GN-0220",
+          "is_path_anchor": true
+        },
+        {
+          "station": "Bolarum",
+          "graph_node": "GN-0202",
+          "is_path_anchor": true
+        },
+        {
+          "station": "Gowdavalli",
+          "graph_node": "GN-0066",
+          "is_path_anchor": true
+        },
+        {
+          "station": "Gundla Pochampally",
+          "graph_node": "GN-0230",
+          "is_path_anchor": true
+        }
+      ],
+      "topology_supported_path": [
+        "GN-0095",
+        "GN-0096",
+        "GN-0007",
+        "GN-0159",
+        "GN-0113",
+        "GN-0094",
+        "GN-0010",
+        "GN-0009",
+        "GN-0138",
+        "GN-0091",
+        "GN-0092",
+        "GN-0220",
+        "GN-0044",
+        "GN-0201",
+        "GN-0200",
+        "GN-0202",
+        "GN-0221",
+        "GN-0097",
+        "GN-0066",
+        "GN-0230"
+      ],
+      "legs": [
+        {
+          "from": "Secunderabad Junction",
+          "to": "Alwal",
+          "distance_km": 9.622,
+          "topology_supported": true
+        },
+        {
+          "from": "Alwal",
+          "to": "Bolarum",
+          "distance_km": 3.655,
+          "topology_supported": true
+        },
+        {
+          "from": "Bolarum",
+          "to": "Gowdavalli",
+          "distance_km": 9.896,
+          "topology_supported": true
+        },
+        {
+          "from": "Gowdavalli",
+          "to": "Gundla Pochampally",
+          "distance_km": 3.904,
+          "topology_supported": true
+        }
+      ],
+      "length_km": 27.077,
+      "segment_count": 19,
+      "status": "PRELIMINARY",
+      "classification_note": "HYDRA planning corridor over an OSM-derived physical network; not an official railway corridor classification.",
+      "data_note": "Only physical network geometry is OSM-derived. Maintenance, asset, failure and work-history records will be synthetic."
+    },
+    {
+      "corridor_id": "HYD-C02",
+      "hydra_name": "Secunderabad-Lingampalli",
+      "origin": "Secunderabad Junction",
+      "destination": "Chandanagar",
+      "reference_stations": [
+        "Secunderabad Junction",
+        "Begumpet",
+        "Borabanda",
+        "HITEC City",
+        "Hafeezpet",
+        "Chandanagar",
+        "Lingampalli"
+      ],
+      "reference_station_status": [
+        {
+          "station": "Secunderabad Junction",
+          "graph_node": "GN-0095",
+          "is_path_anchor": true
+        },
+        {
+          "station": "Begumpet",
+          "graph_node": "GN-0025",
+          "is_path_anchor": true
+        },
+        {
+          "station": "Borabanda",
+          "graph_node": "GN-0181",
+          "is_path_anchor": true
+        },
+        {
+          "station": "HITEC City",
+          "graph_node": "GN-0188",
+          "is_path_anchor": true
+        },
+        {
+          "station": "Hafeezpet",
+          "graph_node": "GN-0102",
+          "is_path_anchor": false
+        },
+        {
+          "station": "Chandanagar",
+          "graph_node": "GN-0081",
+          "is_path_anchor": true
+        },
+        {
+          "station": "Lingampalli",
+          "graph_node": "GN-0150",
+          "is_path_anchor": false
+        }
+      ],
+      "topology_supported_path": [
+        "GN-0095",
+        "GN-0158",
+        "GN-0154",
+        "GN-0157",
+        "GN-0163",
+        "GN-0236",
+        "GN-0144",
+        "GN-0043",
+        "GN-0042",
+        "GN-0063",
+        "GN-0062",
+        "GN-0058",
+        "GN-0023",
+        "GN-0022",
+        "GN-0024",
+        "GN-0053",
+        "GN-0052",
+        "GN-0025",
+        "GN-0026",
+        "GN-0082",
+        "GN-0061",
+        "GN-0060",
+        "GN-0224",
+        "GN-0171",
+        "GN-0190",
+        "GN-0189",
+        "GN-0181",
+        "GN-0179",
+        "GN-0180",
+        "GN-0182",
+        "GN-0183",
+        "GN-0185",
+        "GN-0188",
+        "GN-0186",
+        "GN-0064",
+        "GN-0057",
+        "GN-0104",
+        "GN-0105",
+        "GN-0081"
+      ],
+      "legs": [
+        {
+          "from": "Secunderabad Junction",
+          "to": "Begumpet",
+          "distance_km": 5.211,
+          "topology_supported": true
+        },
+        {
+          "from": "Begumpet",
+          "to": "Borabanda",
+          "distance_km": 7.056,
+          "topology_supported": true
+        },
+        {
+          "from": "Borabanda",
+          "to": "HITEC City",
+          "distance_km": 2.913,
+          "topology_supported": true
+        },
+        {
+          "from": "HITEC City",
+          "to": "Chandanagar",
+          "distance_km": 6.316,
+          "topology_supported": true
+        }
+      ],
+      "length_km": 21.496,
+      "segment_count": 38,
+      "status": "PRELIMINARY",
+      "classification_note": "HYDRA planning corridor over an OSM-derived physical network; not an official railway corridor classification.",
+      "data_note": "Only physical network geometry is OSM-derived. Maintenance, asset, failure and work-history records will be synthetic."
+    },
+    {
+      "corridor_id": "HYD-C03",
+      "hydra_name": "Secunderabad-Ghatkesar",
+      "origin": "Secunderabad Junction",
+      "destination": "Ghatkesar",
+      "reference_stations": [
+        "Secunderabad Junction",
+        "Moula Ali",
+        "Charlapalli",
+        "Ghatkesar"
+      ],
+      "reference_station_status": [
+        {
+          "station": "Secunderabad Junction",
+          "graph_node": "GN-0095",
+          "is_path_anchor": true
+        },
+        {
+          "station": "Moula Ali",
+          "graph_node": "GN-0020",
+          "is_path_anchor": false
+        },
+        {
+          "station": "Charlapalli",
+          "graph_node": "GN-0015",
+          "is_path_anchor": true
+        },
+        {
+          "station": "Ghatkesar",
+          "graph_node": "GN-0178",
+          "is_path_anchor": true
+        }
+      ],
+      "topology_supported_path": [
+        "GN-0095",
+        "GN-0096",
+        "GN-0007",
+        "GN-0155",
+        "GN-0109",
+        "GN-0012",
+        "GN-0013",
+        "GN-0194",
+        "GN-0195",
+        "GN-0197",
+        "GN-0014",
+        "GN-0015",
+        "GN-0198",
+        "GN-0069",
+        "GN-0067",
+        "GN-0170",
+        "GN-0176",
+        "GN-0177",
+        "GN-0178"
+      ],
+      "legs": [
+        {
+          "from": "Secunderabad Junction",
+          "to": "Charlapalli",
+          "distance_km": 14.139,
+          "topology_supported": true
+        },
+        {
+          "from": "Charlapalli",
+          "to": "Ghatkesar",
+          "distance_km": 6.136,
+          "topology_supported": true
+        }
+      ],
+      "length_km": 20.275,
+      "segment_count": 18,
+      "status": "PRELIMINARY",
+      "classification_note": "HYDRA planning corridor over an OSM-derived physical network; not an official railway corridor classification.",
+      "data_note": "Only physical network geometry is OSM-derived. Maintenance, asset, failure and work-history records will be synthetic."
+    }
+  ]
+}

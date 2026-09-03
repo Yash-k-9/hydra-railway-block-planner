@@ -1,0 +1,31 @@
+task_id,asset_id,location_km,corridor_id,defect_type,severity,duration_minutes,overdue_days,asset_criticality,safety_impact,due_date
+SMMS-001,SIG-001,124.6,C124,Signal fault,5,60,4,5,5,2026-09-08
+SMMS-002,SIG-002,127.0,C124,Signal fault,5,45,2,5,3,2026-09-10
+SMMS-003,SIG-003,121.2,C124,Relay issue,3,45,3,3,4,2026-09-09
+SMMS-004,SIG-004,128.9,C124,Signal fault,1,90,0,5,1,2026-09-05
+SMMS-005,SIG-005,122.5,C124,Telecom equipment fault,2,60,6,1,2,2026-09-09
+SMMS-006,SIG-006,129.3,C124,Cable damage,2,90,0,3,5,2026-09-12
+SMMS-007,SIG-007,205.0,C130,Cable damage,5,90,15,3,4,2026-09-05
+SMMS-008,SIG-008,210.4,C130,Telecom equipment fault,5,45,10,3,5,2026-09-09
+SMMS-009,SIG-009,203.1,C130,Signal fault,4,60,6,2,3,2026-09-06
+SMMS-010,SIG-010,207.3,C130,Signal lamp failure,5,90,0,1,1,2026-09-06
+SMMS-011,SIG-011,213.6,C130,Telecom equipment fault,1,60,0,2,4,2026-09-06
+SMMS-012,SIG-012,212.7,C130,Signal fault,3,60,0,1,3,2026-09-07
+SMMS-013,SIG-013,305.3,C145,Signal fault,5,60,0,4,5,2026-09-06
+SMMS-014,SIG-014,310.4,C145,Relay issue,3,45,0,3,3,2026-09-09
+SMMS-015,SIG-015,311.7,C145,Relay issue,4,60,0,2,2,2026-09-04
+SMMS-016,SIG-016,302.4,C145,Relay issue,4,60,2,3,3,2026-09-12
+SMMS-017,SIG-017,300.6,C145,Signal lamp failure,5,60,0,1,3,2026-09-06
+SMMS-018,SIG-018,307.1,C145,Telecom equipment fault,3,30,7,3,3,2026-09-10
+SMMS-019,SIG-019,405.2,C160,Signal fault,5,60,0,3,4,2026-09-04
+SMMS-020,SIG-020,408.3,C160,Telecom equipment fault,3,90,0,5,5,2026-09-07
+SMMS-021,SIG-021,400.8,C160,Relay issue,5,60,0,1,3,2026-09-08
+SMMS-022,SIG-022,410.2,C160,Relay issue,4,60,0,4,2,2026-09-12
+SMMS-023,SIG-023,401.5,C160,Signal lamp failure,2,30,11,5,3,2026-09-05
+SMMS-024,SIG-024,411.3,C160,Relay issue,3,45,0,2,1,2026-09-04
+SMMS-025,SIG-025,505.1,C175,Telecom equipment fault,4,45,0,5,5,2026-09-07
+SMMS-026,SIG-026,510.3,C175,Signal lamp failure,4,60,11,5,3,2026-09-05
+SMMS-027,SIG-027,511.7,C175,Telecom equipment fault,2,30,0,4,5,2026-09-12
+SMMS-028,SIG-028,503.3,C175,Telecom equipment fault,3,90,0,5,4,2026-09-12
+SMMS-029,SIG-029,512.1,C175,Signal lamp failure,2,90,0,2,3,2026-09-12
+SMMS-030,SIG-030,507.0,C175,Signal lamp failure,2,60,0,3,2,2026-09-08

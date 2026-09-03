@@ -1,0 +1,9 @@
+{
+  "raw_planning_track_ways": 347,
+  "usable_graph_edges": 326,
+  "snapped_graph_nodes": 237,
+  "station_or_junction_nodes": 118,
+  "stations_mapped_within_250m": 15,
+  "stations_farther_than_250m": 25,
+  "planning_track_length_km": 284.78
+}

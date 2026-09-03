@@ -1,0 +1,16 @@
+{
+  "dataset": "HYDRA synthetic Hyderabad asset inventory",
+  "version": "0.1",
+  "source_geometry": "OSM-derived HYDRA planning corridors",
+  "asset_count": 105,
+  "corridor_count": 3,
+  "asset_types": [
+    "DRAINAGE",
+    "OHE",
+    "SIGNAL",
+    "TRACK",
+    "TURNOUT"
+  ],
+  "data_status": "SYNTHETIC",
+  "important_note": "These assets are simulated for HYDRA experimentation and do not represent official Indian Railways asset records."
+}
