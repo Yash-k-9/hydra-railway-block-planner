@@ -33,6 +33,7 @@ from services.simulation import (
     create_simulation_snapshot,
 )
 from services.hyderabad_adapter import load_hyderabad_tasks, load_hyderabad_trains, get_hyderabad_map_data, load_hyderabad_segments
+from services.station_enrichment import enrich_block_stations
 
 
 DATA_DIR = os.path.join(PROJECT_DIR, "data")
@@ -117,6 +118,8 @@ def load_data(dataset: str = "default"):
     if dataset == "hyderabad":
         tasks = load_hyderabad_tasks()
         trains = load_hyderabad_trains()
+        state["tasks"] = tasks
+        state["trains"] = trains
         counts = {"TMS": len(tasks), "SMMS": 0, "TDMS": 0, "total": len(tasks)}
     else:
         try:
@@ -318,6 +321,10 @@ def get_weekly_plan():
                     "type": "MultiLineString",
                     "coordinates": coords
                 }
+            
+            enrichment_result = enrich_block_stations(b, map_data["network"], map_data.get("stations", []), segments)
+            b["affected_stations"] = enrichment_result["affected_stations"]
+            b["boundary_stations"] = enrichment_result["boundary_stations"]
 
     # Organize by date
     by_date = {}
