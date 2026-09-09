@@ -10,7 +10,26 @@ def enrich_block_stations(
     """
     Enrich a block with affected_stations and boundary_stations based on the network topology.
     """
-    # 1. Build adjacency list for the entire network graph
+    # Determine the block's corridor_id
+    block_corridor_id = None
+    for t in block.get("tasks", []):
+        seg_id = t.get("segment_id")
+        if seg_id and seg_id in segments:
+            block_corridor_id = segments[seg_id].get("corridor_id")
+            if block_corridor_id:
+                break
+
+    # Build mapping from edge_id to set of corridor_ids to filter the network graph
+    edge_id_to_corridors: Dict[str, Set[str]] = {}
+    for v in segments.values():
+        e_id = v.get("edge_id")
+        c_id = v.get("corridor_id")
+        if e_id and c_id:
+            if e_id not in edge_id_to_corridors:
+                edge_id_to_corridors[e_id] = set()
+            edge_id_to_corridors[e_id].add(c_id)
+
+    # 1. Build adjacency list for the corridor-specific graph
     graph: Dict[str, Set[str]] = {}
     edge_id_to_nodes: Dict[str, tuple] = {}
     
@@ -21,15 +40,16 @@ def enrich_block_stations(
             v = props.get("v")
             edge_id = props.get("edge_id")
             
-            if u and v:
-                if u not in graph:
-                    graph[u] = set()
-                if v not in graph:
-                    graph[v] = set()
-                graph[u].add(v)
-                graph[v].add(u)
-                
-                if edge_id:
+            # Check if this edge belongs to the block's corridor
+            if edge_id and block_corridor_id in edge_id_to_corridors.get(edge_id, set()):
+                if u and v:
+                    if u not in graph:
+                        graph[u] = set()
+                    if v not in graph:
+                        graph[v] = set()
+                    graph[u].add(v)
+                    graph[v].add(u)
+                    
                     edge_id_to_nodes[edge_id] = (u, v)
 
     # 2. Build station lookup by network node id
@@ -70,8 +90,8 @@ def enrich_block_stations(
                 affected_stations.append(station)
                 affected_station_ids.add(s_id)
 
-    # 6. Identify "outer" block nodes and queue for BFS
-    # An outer node is a block node that has at least one neighbor in the graph NOT in block_nodes
+    # 6. Identify "outer" block nodes and queue for BFS using the corridor-specific graph
+    # An outer node is a block node that has at least one neighbor in the CORRIDOR graph NOT in block_nodes
     queue = deque()
     visited = set(block_nodes)
     
@@ -79,7 +99,7 @@ def enrich_block_stations(
         if node in graph:
             for neighbor in graph[node]:
                 if neighbor not in block_nodes:
-                    # 'node' is an outer block node, 'neighbor' is the first step outward
+                    # 'node' is an outer block node, 'neighbor' is the first step outward along the corridor
                     visited.add(neighbor)
                     queue.append(neighbor)
 
