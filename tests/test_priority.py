@@ -46,3 +46,23 @@ def test_determinism():
     calculate_priority(task2, {"C1": 5})
     
     assert task1["priority_score"] == task2["priority_score"]
+
+def test_classification_boundaries():
+    assert _classify(85) == "CRITICAL"
+    assert _classify(84.5) == "HIGH"
+    assert _classify(70) == "HIGH"
+    assert _classify(69.5) == "MEDIUM"
+    assert _classify(50) == "MEDIUM"
+    assert _classify(49.5) == "LOW"
+
+def test_hyderabad_tasks_vary_criticality():
+    from backend.services.hyderabad_adapter import load_hyderabad_tasks, load_hyderabad_trains
+    from backend.services.priority import calculate_all_priorities
+
+    tasks = load_hyderabad_tasks()
+    assert len({t["asset_criticality"] for t in tasks}) > 1
+    assert len({t["safety_impact"] for t in tasks}) > 1
+    assert any(t["overdue_days"] > 0 for t in tasks)
+
+    _, summary = calculate_all_priorities(tasks, load_hyderabad_trains())
+    assert summary["CRITICAL"] > 0

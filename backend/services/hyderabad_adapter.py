@@ -2,7 +2,29 @@ import csv
 import os
 import json
 import random
+from datetime import date, datetime, timedelta
 from typing import List, Dict, Any
+
+# Start of the Hyderabad planning week (matches load_hyderabad_trains)
+PLANNING_START = date(2026, 9, 7)
+
+# How critical each asset type is to safe running (1–5)
+ASSET_CRITICALITY = {
+    "TRACK": 5,
+    "TURNOUT": 5,
+    "SIGNAL": 4,
+    "SIGNALS": 4,
+    "OHE": 4,
+    "DRAINAGE": 2,
+}
+
+# Safety impact from the asset's recorded health state (1–5)
+HEALTH_SAFETY_IMPACT = {
+    "CRITICAL": 5,
+    "POOR": 4,
+    "FAIR": 3,
+    "GOOD": 1,
+}
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data", "hyderabad")
 
@@ -67,6 +89,17 @@ def load_hyderabad_tasks() -> List[Dict[str, Any]]:
             condition = int(row.get("condition_score", 100))
             severity = 5 if condition < 50 else (3 if condition < 80 else 1)
 
+            # Due date = last maintenance + interval; overdue counted from planning start
+            due_date_str = "2026-09-10"
+            overdue_days = 5 if condition < 60 else 0
+            try:
+                last = datetime.strptime(row["last_maintenance_date"], "%Y-%m-%d").date()
+                due = last + timedelta(days=int(row["maintenance_interval_days"]))
+                due_date_str = due.isoformat()
+                overdue_days = max(0, (PLANNING_START - due).days)
+            except (KeyError, ValueError):
+                pass
+
             tasks.append({
                 "task_id": f"HYD-TSK-{idx:04d}",
                 "source_system": "HYDERABAD",
@@ -77,10 +110,10 @@ def load_hyderabad_tasks() -> List[Dict[str, Any]]:
                 "defect_type": f"Maintenance for {asset_type}",
                 "severity": severity,
                 "duration_minutes": 120, # Fixed for simulation
-                "overdue_days": 5 if condition < 60 else 0,
-                "asset_criticality": 3,
-                "safety_impact": 3,
-                "due_date": "2026-09-10",
+                "overdue_days": overdue_days,
+                "asset_criticality": ASSET_CRITICALITY.get(asset_type, 3),
+                "safety_impact": HEALTH_SAFETY_IMPACT.get(row.get("health_state", "").upper(), 3),
+                "due_date": due_date_str,
                 "department": dept
             })
             

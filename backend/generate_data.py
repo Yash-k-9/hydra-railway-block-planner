@@ -373,6 +373,8 @@ COA_FIELDS = [
 
 def generate_all():
     """Generate all synthetic datasets and write to data/ directory."""
+    # Re-seed on every call so repeated generation gives identical demo data
+    random.seed(42)
     tms = generate_tms()
     smms = generate_smms()
     tdms = generate_tdms()

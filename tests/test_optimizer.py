@@ -79,3 +79,39 @@ def test_no_feasible_window():
     assert result["status"] in ("OPTIMAL", "FEASIBLE")
     assert len(result["blocks"]) == 0
     assert "T1" not in result["scheduled_tasks"]
+
+def test_multiple_groups_in_one_window():
+    # Two groups of 60 min each fill a 120-min window: utilization must count both
+    tasks = [
+        {"task_id": "T1", "department": "ENG", "corridor_id": "C1", "location_km": 10.0, "duration_minutes": 60, "priority_score": 50, "priority_level": "MEDIUM"},
+        {"task_id": "T2", "department": "SIG", "corridor_id": "C1", "location_km": 10.2, "duration_minutes": 60, "priority_score": 50, "priority_level": "MEDIUM"},
+        {"task_id": "T3", "department": "ENG", "corridor_id": "C1", "location_km": 20.0, "duration_minutes": 60, "priority_score": 50, "priority_level": "MEDIUM"},
+        {"task_id": "T4", "department": "SIG", "corridor_id": "C1", "location_km": 20.2, "duration_minutes": 60, "priority_score": 50, "priority_level": "MEDIUM"},
+    ]
+    groups = [
+        {"group_id": "G1", "task_ids": ["T1", "T2"], "corridor_id": "C1", "joint_duration": 60},
+        {"group_id": "G2", "task_ids": ["T3", "T4"], "corridor_id": "C1", "joint_duration": 60},
+    ]
+    windows = [{"window_id": "W1", "corridor_id": "C1", "date": "D1", "start_time": "10:00", "end_time": "12:00", "duration_minutes": 120}]
+
+    result = optimize(tasks, groups, windows, time_limit=2)
+    assert len(result["blocks"]) == 1
+    assert result["blocks"][0]["utilization"] == 100.0
+    assert validate_schedule(result, [])["valid"] is True
+
+def test_validation_counts_each_group():
+    # Two bundled groups of 90 min in a 120-min block is an overfill
+    result = {
+        "blocks": [{
+            "block_id": "B1", "duration_minutes": 120, "corridor_id": "C1", "date": "D1", "start_time": "10:00", "end_time": "12:00",
+            "tasks": [
+                {"task_id": "T1", "duration_minutes": 90, "bundled": True, "group_id": "G1"},
+                {"task_id": "T2", "duration_minutes": 60, "bundled": True, "group_id": "G1"},
+                {"task_id": "T3", "duration_minutes": 90, "bundled": True, "group_id": "G2"},
+                {"task_id": "T4", "duration_minutes": 60, "bundled": True, "group_id": "G2"},
+            ],
+        }]
+    }
+    val = validate_schedule(result, [])
+    assert val["valid"] is False
+    assert val["checks"]["capacity_violations"] == 1

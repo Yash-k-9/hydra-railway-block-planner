@@ -24,7 +24,7 @@ from generate_data import generate_all
 from services.data_loader import load_tms, load_smms, load_tdms, load_coa
 from services.normalizer import normalize_all
 from services.priority import calculate_all_priorities
-from services.block_windows import find_all_windows
+from services.block_windows import find_all_windows, DAY_START, DAY_END, _time_to_minutes
 from services.coordination import find_coordination_groups, summarize_groups, get_ungrouped_tasks
 from services.optimizer import optimize, validate_schedule
 from services.baseline import schedule_baseline
@@ -115,6 +115,12 @@ def generate_data():
 def load_data(dataset: str = "default"):
     """Load CSVs, normalize, and store in SQLite. Also loads trains."""
     state["dataset"] = dataset
+    # Clear results derived from the previous dataset
+    state.update({
+        "windows": [], "groups": [], "baseline": None, "optimized": None,
+        "validation": None, "priority_summary": {}, "group_summary": {},
+        "simulation_snapshot": None, "simulation_result": None,
+    })
     if dataset == "hyderabad":
         tasks = load_hyderabad_tasks()
         trains = load_hyderabad_trains()
@@ -360,8 +366,12 @@ def get_analytics():
     )
     total_overdue = sum(1 for t in state["tasks"] if t.get("overdue_days", 0) > 0)
 
-    # Estimated asset availability
-    total_planning_minutes = 7 * 16 * 60  # 7 days * 16h operating window * 5 corridors
+    # Estimated asset availability: share of corridor-time (days × operating window × corridors)
+    # not taken up by maintenance blocks
+    num_days = len({t["date"] for t in state["trains"]}) or 7
+    num_corridors = len({t["corridor_id"] for t in state["trains"]}) or 1
+    operating_minutes = _time_to_minutes(DAY_END) - _time_to_minutes(DAY_START)
+    total_planning_minutes = num_days * operating_minutes * num_corridors
     total_block_minutes = opt_stats.get("total_block_hours", 0) * 60
     availability = round((1 - total_block_minutes / max(total_planning_minutes, 1)) * 100, 1) if opt_stats else 0
 

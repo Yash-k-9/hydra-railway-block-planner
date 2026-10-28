@@ -249,11 +249,13 @@ def optimize(tasks, groups, windows, weights=None, time_limit=None):
                     t = task_by_id[tid]
                     t_copy = dict(t)
                     t_copy["bundled"] = True
+                    t_copy["group_id"] = gid
                     block_tasks.append(t_copy)
                     block_departments.add(t["department"])
                     scheduled_task_ids.add(tid)
                     bundled_task_ids.add(tid)
-                block_duration_used = max(block_duration_used, g["joint_duration"])
+                # Groups in the same window run one after another (matches C3)
+                block_duration_used += g["joint_duration"]
 
         # Check individual assignments
         for t in tasks:
@@ -361,13 +363,18 @@ def validate_schedule(result, trains):
 
     # Check 3: Tasks fit within their blocks
     for block in result["blocks"]:
-        # For bundled tasks: joint duration = max
-        bundled = [bt for bt in block["tasks"] if bt.get("bundled")]
-        individual = [bt for bt in block["tasks"] if not bt.get("bundled")]
+        # For bundled tasks: each group's joint duration = max of its tasks,
+        # and groups sharing a window run one after another
+        group_durations = {}
+        individual = []
+        for bt in block["tasks"]:
+            if bt.get("bundled"):
+                gid = bt.get("group_id")
+                group_durations[gid] = max(group_durations.get(gid, 0), bt["duration_minutes"])
+            else:
+                individual.append(bt)
 
-        total_needed = 0
-        if bundled:
-            total_needed += max(bt["duration_minutes"] for bt in bundled)
+        total_needed = sum(group_durations.values())
         total_needed += sum(bt["duration_minutes"] for bt in individual)
 
         if total_needed > block["duration_minutes"]:

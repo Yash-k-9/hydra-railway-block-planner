@@ -14,9 +14,9 @@ All sub-scores are normalized to [0, 1].
 Final score is scaled to 0–100.
 
 Classification:
-    90–100  →  CRITICAL
-    75–89   →  HIGH
-    50–74   →  MEDIUM
+    85–100  →  CRITICAL
+    70–84   →  HIGH
+    50–69   →  MEDIUM
      0–49   →  LOW
 """
 
