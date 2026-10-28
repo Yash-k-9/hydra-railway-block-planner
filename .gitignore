@@ -1,0 +1,9 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Generated SQLite database (rebuilt by /api/data/load and run_pipeline.py)
+data/hydra.db
