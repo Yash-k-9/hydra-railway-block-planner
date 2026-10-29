@@ -141,7 +141,8 @@ def main():
     print("  BASELINE (Decentralized)")
     print(hr())
 
-    baseline = schedule_baseline(tasks, windows)
+    crews = database.get_crew_counts(conn) or None
+    baseline = schedule_baseline(tasks, windows, crews=crews)
     bs = baseline["stats"]
 
     print(f"  Blocks          : {bs['total_blocks']}")
@@ -158,7 +159,7 @@ def main():
     print(hr())
 
     print("  Running optimizer...")
-    result = optimize(tasks, groups, windows)
+    result = optimize(tasks, groups, windows, crews=crews)
 
     os_ = result["stats"]
     print(f"  Status          : {result['status']}")
@@ -169,6 +170,8 @@ def main():
     print(f"  Bundled tasks   : {os_['bundled_tasks']}")
     print(f"  Multi-dept blocks: {os_['multi_dept_blocks']}")
     print(f"  Avg utilization : {os_['avg_utilization']}%")
+    print(f"  Late tasks      : {os_['late_tasks']} ({os_['total_days_late']} days late in total)")
+    print(f"  Priority gap    : {os_['priority_gap_pct']}% from best possible (0 = proven optimal)")
     print(f"  Optimization time: {result['optimization_time']} sec")
     print()
 
@@ -198,11 +201,13 @@ def main():
     print("  VALIDATION")
     print(hr())
 
-    validation = validate_schedule(result, coa_raw)
+    validation = validate_schedule(result, coa_raw, crews=crews)
 
     print(f"  Train conflicts : {validation['checks'].get('train_conflicts', 0)}")
     print(f"  Duplicate tasks : {validation['checks'].get('duplicate_tasks', 0)}")
     print(f"  Capacity issues : {validation['checks'].get('capacity_violations', 0)}")
+    print(f"  Section issues  : {validation['checks'].get('section_violations', 0)}")
+    print(f"  Crew issues     : {validation['checks'].get('crew_violations', 0)}")
     print()
 
     if validation["valid"]:

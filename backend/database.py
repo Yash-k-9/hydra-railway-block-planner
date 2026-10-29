@@ -3,6 +3,7 @@ HYDRA - SQLite Database Layer
 Uses Python's built-in sqlite3. No ORM.
 """
 
+import json
 import os
 import sqlite3
 
@@ -99,6 +100,11 @@ def init_db(db_path=None):
         applied         INTEGER DEFAULT 0
     );
 
+    CREATE TABLE IF NOT EXISTS app_state (
+        key             TEXT PRIMARY KEY,
+        value           TEXT                  -- JSON string
+    );
+
     CREATE TABLE IF NOT EXISTS optimization_results (
         id              INTEGER PRIMARY KEY AUTOINCREMENT,
         plan_type       TEXT NOT NULL,
@@ -124,7 +130,7 @@ def reset_db(db_path=None):
     cur = conn.cursor()
     for table in ["block_tasks", "blocks", "simulation_events",
                    "optimization_results", "train_movements",
-                   "resources", "maintenance_tasks"]:
+                   "resources", "maintenance_tasks", "app_state"]:
         cur.execute(f"DROP TABLE IF EXISTS {table}")
     conn.commit()
     conn.close()
@@ -187,6 +193,76 @@ def get_all_trains(conn):
     """Return all train movements as list of dicts."""
     rows = conn.execute("SELECT * FROM train_movements").fetchall()
     return [dict(r) for r in rows]
+
+
+def save_state(conn, state):
+    """Store the API's working state (dict of JSON-serializable values)."""
+    conn.executemany(
+        "INSERT OR REPLACE INTO app_state (key, value) VALUES (?, ?)",
+        [(key, json.dumps(value)) for key, value in state.items()],
+    )
+    conn.commit()
+
+
+def load_state(conn):
+    """Return the stored working state as a dict ({} if nothing is stored)."""
+    try:
+        rows = conn.execute("SELECT key, value FROM app_state").fetchall()
+    except sqlite3.OperationalError:
+        return {}
+    return {key: json.loads(value) for key, value in rows}
+
+
+def save_plan(conn, plan_type, result):
+    """Replace the stored blocks of one plan ('optimized' or 'baseline') and log its stats."""
+    old_ids = [r[0] for r in conn.execute(
+        "SELECT block_id FROM blocks WHERE plan_type=?", (plan_type,)
+    ).fetchall()]
+    conn.executemany("DELETE FROM block_tasks WHERE block_id=?", [(b,) for b in old_ids])
+    conn.execute("DELETE FROM blocks WHERE plan_type=?", (plan_type,))
+
+    known_tasks = {r[0] for r in conn.execute("SELECT task_id FROM maintenance_tasks").fetchall()}
+    for b in result.get("blocks", []):
+        conn.execute(
+            """INSERT OR REPLACE INTO blocks
+               (block_id, plan_type, corridor_id, date, start_time, end_time,
+                duration_minutes, departments, requires_isolation, utilization, status)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            (b["block_id"], plan_type, b["corridor_id"], b["date"], b["start_time"],
+             b["end_time"], b["duration_minutes"], ",".join(b.get("departments", [])),
+             int(bool(b.get("requires_isolation"))), b.get("utilization", 0),
+             b.get("status", "generated")),
+        )
+        conn.executemany(
+            "INSERT INTO block_tasks (block_id, task_id) VALUES (?, ?)",
+            [(b["block_id"], bt["task_id"]) for bt in b["tasks"] if bt["task_id"] in known_tasks],
+        )
+
+    stats = result.get("stats", {})
+    conn.execute(
+        """INSERT INTO optimization_results
+           (plan_type, total_blocks, total_block_hours, tasks_completed,
+            critical_completed, bundled_tasks, optimization_time, objective_value, created_at)
+           VALUES (?,?,?,?,?,?,?,?,datetime('now'))""",
+        (plan_type, stats.get("total_blocks"), stats.get("total_block_hours"),
+         stats.get("tasks_completed"), stats.get("critical_completed"),
+         stats.get("bundled_tasks"), result.get("optimization_time"),
+         result.get("objective_value")),
+    )
+    conn.commit()
+
+
+def set_block_status(conn, block_id, status):
+    conn.execute("UPDATE blocks SET status=? WHERE block_id=?", (status, block_id))
+    conn.commit()
+
+
+def get_crew_counts(conn):
+    """Return {department: number of crews} from the resources table."""
+    rows = conn.execute(
+        "SELECT department, COUNT(*) FROM resources GROUP BY department"
+    ).fetchall()
+    return {dept: count for dept, count in rows}
 
 
 def insert_default_resources(conn):

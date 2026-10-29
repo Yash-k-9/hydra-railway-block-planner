@@ -26,7 +26,7 @@ from services.normalizer import normalize_all
 from services.priority import calculate_all_priorities
 from services.block_windows import find_all_windows, DAY_START, DAY_END, _time_to_minutes
 from services.coordination import find_coordination_groups, summarize_groups, get_ungrouped_tasks
-from services.optimizer import optimize, validate_schedule
+from services.optimizer import optimize, validate_schedule, BLOCK_SECTION_KM
 from services.baseline import schedule_baseline
 from services.simulation import (
     inject_train_delay, inject_new_defect, find_affected_blocks,
@@ -48,8 +48,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── In-memory state ───────────────────────────────────────────────────────
-# For a prototype, we hold the current pipeline results in memory.
+# ── Working state ─────────────────────────────────────────────────────────
+# Held in memory for speed, saved to SQLite after every change (see
+# persist_state below) and restored on startup, so a restart keeps the plan.
 state = {
     "tasks": [],
     "trains": [],
@@ -64,6 +65,41 @@ state = {
     "simulation_result": None,
     "dataset": "default",
 }
+
+# Requests that change the state; it is saved to SQLite after each one succeeds
+STATE_CHANGING_GETS = {"/api/coordination/groups", "/api/block-windows"}
+
+
+def _save_state():
+    conn = database.get_connection()
+    try:
+        database.save_state(conn, state)
+    finally:
+        conn.close()
+
+
+def _restore_state():
+    try:
+        database.init_db().close()  # creates app_state in databases made before it existed
+        conn = database.get_connection()
+        saved = database.load_state(conn)
+        conn.close()
+    except Exception:
+        return
+    state.update({k: v for k, v in saved.items() if k in state})
+
+
+_restore_state()
+
+
+@app.middleware("http")
+async def persist_state(request, call_next):
+    response = await call_next(request)
+    if response.status_code < 400 and (
+        request.method == "POST" or request.url.path in STATE_CHANGING_GETS
+    ):
+        _save_state()
+    return response
 
 
 # ── Pydantic models ──────────────────────────────────────────────────────
@@ -87,6 +123,46 @@ class TrainDelayInput(BaseModel):
 class BlockApproval(BaseModel):
     block_id: str
     action: str  # "approve" or "reject"
+
+
+def _blocks_fitting(blocks, windows):
+    """Split blocks into those that still sit inside a train-free window and
+    those a disruption (e.g. a delayed train) has broken."""
+    fitting, broken = [], []
+    for b in blocks:
+        bs, be = _time_to_minutes(b["start_time"]), _time_to_minutes(b["end_time"])
+        fits = any(
+            w["corridor_id"] == b["corridor_id"] and w["date"] == b["date"]
+            and _time_to_minutes(w["start_time"]) <= bs and be <= _time_to_minutes(w["end_time"])
+            for w in windows
+        )
+        (fitting if fits else broken).append(b)
+    return fitting, broken
+
+
+def _approved_blocks(windows):
+    """Approved blocks of the current plan: (still fitting, broken by a disruption)."""
+    approved = [b for b in (state["optimized"] or {}).get("blocks", []) if b.get("status") == "approved"]
+    return _blocks_fitting(approved, windows)
+
+
+def _save_plan(plan_type, result):
+    conn = database.get_connection()
+    try:
+        database.save_plan(conn, plan_type, result)
+    finally:
+        conn.close()
+
+
+def _crews():
+    """Crews per department from the resources table (None → optimizer defaults)."""
+    try:
+        conn = database.get_connection()
+        crews = database.get_crew_counts(conn)
+        conn.close()
+        return crews or None
+    except Exception:
+        return None
 
 
 # ── Health ────────────────────────────────────────────────────────────────
@@ -257,11 +333,17 @@ def run_optimization():
     if not state["groups"]:
         state["groups"] = find_coordination_groups(state["tasks"])
 
-    result = optimize(state["tasks"], state["groups"], state["windows"])
-    validation = validate_schedule(result, state["trains"])
+    # Re-running keeps blocks the planner already approved
+    kept, _ = _approved_blocks(state["windows"])
+
+    crews = _crews()
+    result = optimize(state["tasks"], state["groups"], state["windows"], crews=crews,
+                      fixed_blocks=kept)
+    validation = validate_schedule(result, state["trains"], crews=crews)
 
     state["optimized"] = result
     state["validation"] = validation
+    _save_plan("optimized", result)
 
     return {
         "status": result["status"],
@@ -269,6 +351,8 @@ def run_optimization():
         "blocks": result["blocks"],
         "unscheduled_tasks": result["unscheduled_tasks"],
         "objective_value": result["objective_value"],
+        "objectives": result["objectives"],
+        "optimality_gaps": result["optimality_gaps"],
         "optimization_time": result["optimization_time"],
         "validation": validation,
     }
@@ -282,8 +366,9 @@ def run_baseline():
     if not state["windows"]:
         state["windows"] = find_all_windows(state["trains"])
 
-    result = schedule_baseline(state["tasks"], state["windows"])
+    result = schedule_baseline(state["tasks"], state["windows"], crews=_crews())
     state["baseline"] = result
+    _save_plan("baseline", result)
 
     return {
         "stats": result["stats"],
@@ -412,9 +497,15 @@ def get_block_detail(block_id: str):
             kms = [t["location_km"] for t in block["tasks"]]
             if len(kms) > 1:
                 span = max(kms) - min(kms)
-                reasons.append(f"Tasks within {span:.1f} km (max 1.0 km for bundling)")
+                reasons.append(f"Work spans {span:.1f} km (max {BLOCK_SECTION_KM} km per block section)")
 
-            reasons.append("No confirmed train conflict in this window")
+            reasons.append(
+                f"Block {block['start_time']}–{block['end_time']} sits inside the train-free window "
+                f"{block.get('window_start', block['start_time'])}–{block.get('window_end', block['end_time'])}"
+            )
+            late = [t for t in block["tasks"] if t.get("days_late")]
+            if late:
+                reasons.append(f"{len(late)} task(s) done after their due date (no earlier slot fitted)")
 
             high_pri = [t for t in block["tasks"] if t["priority_level"] in ("CRITICAL", "HIGH")]
             if high_pri:
@@ -433,7 +524,8 @@ def get_block_detail(block_id: str):
                 "explanation": reasons,
                 "utilization_detail": {
                     "block_duration": block["duration_minutes"],
-                    "work_duration": max(t["duration_minutes"] for t in block["tasks"]),
+                    "work_duration": block["duration_minutes"],
+                    "window_duration": block.get("window_minutes", block["duration_minutes"]),
                     "utilization_pct": block["utilization"],
                 },
             }
@@ -457,6 +549,9 @@ def approve_block(approval: BlockApproval):
                 block["status"] = "rejected"
             else:
                 raise HTTPException(status_code=400, detail="Action must be 'approve' or 'reject'")
+            conn = database.get_connection()
+            database.set_block_status(conn, block["block_id"], block["status"])
+            conn.close()
             return {"block_id": block["block_id"], "status": block["status"]}
 
     raise HTTPException(status_code=404, detail=f"Block {approval.block_id} not found")
@@ -565,9 +660,33 @@ def reoptimize():
     # Recalculate groups with possibly modified tasks
     new_groups = find_coordination_groups(sim_tasks)
 
-    # Re-optimize
-    new_result = optimize(sim_tasks, new_groups, new_windows)
-    new_validation = validate_schedule(new_result, sim_trains)
+    # Approved blocks stay as they are unless the disruption broke them
+    kept, released = _approved_blocks(new_windows)
+    crews = _crews()
+
+    # Repair mode: every block the disruption didn't touch stays as it is; only
+    # tasks from broken blocks, new tasks and unscheduled ones are planned again
+    others = [b for b in state["optimized"]["blocks"] if b.get("status") != "approved"]
+    untouched, broken = _blocks_fitting(others, new_windows)
+    new_result = optimize(sim_tasks, new_groups, new_windows, crews=crews,
+                          fixed_blocks=kept + untouched)
+    mode = "repair"
+
+    # If that leaves a critical task out, re-plan everything except approved blocks
+    critical_left = [
+        t for t in sim_tasks
+        if t.get("priority_level") == "CRITICAL" and t["task_id"] in new_result["unscheduled_tasks"]
+    ]
+    if critical_left and untouched:
+        full = optimize(sim_tasks, new_groups, new_windows, crews=crews,
+                        fixed_blocks=kept, previous_blocks=state["optimized"]["blocks"])
+        if full["stats"].get("critical_completed", 0) > new_result["stats"].get("critical_completed", 0):
+            new_result, mode = full, "full_replan"
+    # Repair-mode fixed blocks count as kept in place, not as "fixed" by the planner
+    if mode == "repair":
+        new_result["stats"]["fixed_blocks"] = len(kept)
+        new_result["stats"]["tasks_moved"] = sum(len(b["tasks"]) for b in broken)
+    new_validation = validate_schedule(new_result, sim_trains, crews=crews)
 
     sim["reoptimized"] = new_result
 
@@ -582,9 +701,15 @@ def reoptimize():
         "after": new_stats,
         "new_blocks": new_result["blocks"],
         "validation": new_validation,
+        "mode": mode,
+        "kept_approved_blocks": [b["block_id"] for b in kept],
+        # Other blocks the disruption broke; their tasks were planned again
+        "broken_blocks": [b["block_id"] for b in broken],
+        # Approved blocks the disruption made impossible; their tasks were re-planned
+        "released_approved_blocks": [b["block_id"] for b in released],
         "changes": {
             "blocks_changed": old_stats["total_blocks"] - new_stats["total_blocks"],
-            "tasks_rescheduled": abs(old_stats["tasks_completed"] - new_stats["tasks_completed"]),
+            "tasks_rescheduled": new_stats["tasks_moved"],
             "tasks_deferred": new_stats["tasks_deferred"],
         },
     }
